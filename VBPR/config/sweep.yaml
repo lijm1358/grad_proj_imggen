@@ -1,0 +1,23 @@
+program : VBPR.py
+project : MMRec
+method: grid
+metric: 
+    goal: minimize
+    name: train-loss
+parameters: 
+    batch_size: 
+        values: [512] 
+    epoch: 
+        values: [15]
+    lr: 
+        values: [0.05, 0.005, 0.0005]
+    K: 
+        values: [20]
+    D: 
+        values: [20]
+    reg_theta: 
+        values: [0.1]
+    reg_beta: 
+        values: [0.1]
+    reg_e:
+        values: [0]
