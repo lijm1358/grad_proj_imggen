@@ -1,2 +1,0 @@
-VBPR/dataset/train_dataset.pt filter=lfs diff=lfs merge=lfs -text
-VBPR/dataset/test_dataset.pt filter=lfs diff=lfs merge=lfs -text
