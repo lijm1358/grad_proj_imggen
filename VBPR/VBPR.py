@@ -2,6 +2,7 @@ import os
 import random
 import dotenv
 import wandb
+import yaml
 import numpy as np
 import pandas as pd
 import torch
@@ -107,7 +108,6 @@ class BPRLoss(nn.Module):
         self.reg_beta = reg_beta
         self.reg_e = reg_e
 
-    
     def _cal_l2(self, *tensors):
         total = 0
         for tensor in tensors:
@@ -160,19 +160,18 @@ def get_timestamp(date_format: str = '%d%H%M%S') -> str:
     timestamp = datetime.now()
     return timestamp.strftime(date_format)
 
+def get_config(path):
+    with open(path) as file:
+        config = yaml.load(file, Loader=yaml.FullLoader)
+    return config
+
 def main():
     seed_everything()
-    K = 20
-    D = 20
-    reg_theta = 0.1
-    reg_beta = 0.1
-    reg_e = 0
-    lr = 0.001
-    epoch = 15
-    
+    config = get_config("./config/sweep.yaml")
     print("--------------- Wandb Setting ---------------")
     timestamp = get_timestamp()
     name = f"work-{timestamp}"
+    
 
     # wandb init
     dotenv.load_dotenv()
@@ -181,17 +180,17 @@ def main():
     run = wandb.init(
         project="MMRec",
         name=name, 
-        config={
-        "learning_rate": lr,
-        "model": "vbpr",
-        "dataset": "len cut 7",
-        "epochs": epoch,
-        "K" : K,
-        "D" : D,
-        "reg_theta" : reg_theta,
-        "reg_beta" : reg_beta,
-        "reg_e" : reg_e
-        })
+        config=config)
+
+    # hyper parameters
+    K = wandb.config.K
+    D = wandb.config.D
+    reg_theta = wandb.config.reg_theta
+    reg_beta = wandb.config.reg_beta
+    reg_e = wandb.config.reg_e
+    lr = wandb.config.lr
+    epoch = wandb.config.epoch
+    batch_size = wandb.config.batch_size
     
     # get img emb
     img_emb = pd.read_csv("./data/img_emb.csv")
@@ -199,8 +198,7 @@ def main():
     
     # load dataset
     train_dataset = torch.load("./dataset/train_dataset.pt")
-    test_dataset = torch.load("./dataset/test_dataset.pt")
-    batch_size = 256
+    # test_dataset = torch.load("./dataset/test_dataset.pt")
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size)
     
     # set hyper parameters
@@ -223,8 +221,10 @@ def main():
     
     torch.save(vbpr.state_dict(), "./model/"+name+".pt")
     wandb.save("./model/"+name+".pt")
+    wandb.save("./config/sweep.yaml")
     
     wandb.finish()
+    
 
 if __name__ == "__main__":
     main()
