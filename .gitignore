@@ -1,4 +1,8 @@
-/VBPR/data
+VBPR/data
+VBPR/wandb
+VBPR/model
+VBPR/dataset
 *.csv
 *.jpg
 *.DS_Store
+.env
