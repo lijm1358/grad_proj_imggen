@@ -151,6 +151,23 @@ def train(model, optimizer, dataloader, criterion, device):
     
     return total_loss/len(dataloader)
 
+class EarlyStopper:
+    def __init__(self, patience=4, min_delta=0.001):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.min_loss = float('inf')
+
+    def early_stop(self, loss):
+        if loss < self.min_loss:
+            self.min_loss = loss
+            self.counter = 0
+        elif loss > (self.min_loss + self.min_delta):
+            self.counter += 1
+            if self.counter >= self.patience:
+                return True
+        return False
+
 def seed_everything(seed: int = 42):
     os.environ["PYTHONHASHSEED"] = str(seed)
     random.seed(seed)
@@ -195,7 +212,7 @@ def main():
     seed_everything()
     config_path = "./config/sweep.yaml"
     config = get_config(config_path)
-    print("--------------- Wandb Setting ---------------")
+    print("--------------- Wandb SETTING ---------------")
     timestamp = get_timestamp()
     name = f"work-{timestamp}"
 
@@ -219,10 +236,12 @@ def main():
     batch_size = wandb.config.batch_size
     
     # get img emb
+    print("-------------LOAD IMAGE EMBEDDING-------------")
     img_emb = pd.read_csv("./data/img_emb.csv")
     img_emb = torch.tensor(img_emb.values)
     
     # load dataset
+    print("-------------LOAD DATASET-------------")
     train_dataset = torch.load("./dataset/train_dataset.pt")
     # test_dataset = torch.load("./dataset/test_dataset.pt")
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size)
@@ -241,16 +260,21 @@ def main():
     # train
     vbpr = VBPR(n_user, n_item, K, D, img_emb).to(device)
     optimizer = Adam(params = vbpr.parameters(), lr=lr)
-
+    early_stopper = EarlyStopper()
     train_loss = []
     train_auc = []
     
+    print("-------------TRAINING-------------")
     for i in range(epoch):
         train_loss.append(train(vbpr, optimizer, train_dataloader, criterion, device))
         train_auc.append(cal_auc_score(vbpr, train_dataset.df, sample_user_ids, all_items, device))
-            
+        
         print(f'EPOCH : {i} | AUC : {train_auc[-1]:.6} | LOSS : {train_loss[-1]:.6}')
         wandb.log({"train-auc":train_auc[-1] ,"train-loss":train_loss[-1], "epoch": i+1})
+        
+        if early_stopper.early_stop(train_auc[-1]):
+            print("-------------EARLY STOPPING-------------")
+            break
     
     torch.save(vbpr.state_dict(), "./model/"+name+".pt")
     wandb.save("./model/"+name+".pt")
