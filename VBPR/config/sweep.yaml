@@ -3,18 +3,18 @@ project : MMRec
 method: grid
 metric: 
     goal: minimize
-    name: train-loss
+    name: train-auc
 parameters: 
     batch_size: 
         values: [512] 
     epoch: 
-        values: [15]
+        values: [30]
     lr: 
-        values: [0.05, 0.005, 0.0005]
+        values: [0.01, 0.005, 0.001]
     K: 
-        values: [20]
+        values: [25]
     D: 
-        values: [20]
+        values: [25]
     reg_theta: 
         values: [0.1]
     reg_beta: 
