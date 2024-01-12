@@ -1,2 +1,4 @@
 fashion-clip
 kaggle
+wandb
+scikit-learn
