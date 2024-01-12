@@ -2,7 +2,7 @@ program : VBPR.py
 project : MMRec
 method: grid
 metric: 
-    goal: minimize
+    goal: maximize
     name: train-auc
 parameters: 
     batch_size: 
