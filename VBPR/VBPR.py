@@ -156,13 +156,13 @@ class EarlyStopper:
         self.patience = patience
         self.min_delta = min_delta
         self.counter = 0
-        self.min_loss = float('inf')
+        self.max_metric = float('-inf')
 
-    def early_stop(self, loss):
-        if loss < self.min_loss:
-            self.min_loss = loss
+    def early_stop(self, metric):
+        if metric > self.max_metric:
+            self.max_metric = metric
             self.counter = 0
-        elif loss > (self.min_loss + self.min_delta):
+        elif metric < (self.max_metric - self.min_delta):
             self.counter += 1
             if self.counter >= self.patience:
                 return True
@@ -210,7 +210,7 @@ def cal_auc_score(model, df, sample_user_ids, all_items, device):
 
 def main():
     seed_everything()
-    config_path = "./config/sweep.yaml"
+    config_path = "./config/sweep2.yaml"
     config = get_config(config_path)
     print("--------------- Wandb SETTING ---------------")
     timestamp = get_timestamp()
