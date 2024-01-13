@@ -3,21 +3,25 @@ project : MMRec
 method: grid
 metric: 
     goal: maximize
-    name: train-auc
+    name: test-auc
 parameters: 
+    dataset:
+        value : "len cut 7"
+    sample_size:
+        value : "(n_user//100)*3"
     batch_size: 
-        values: [512] 
+        values: [1024] 
     epoch: 
         values: [30]
     lr: 
-        values: [0.01, 0.005, 0.001]
+        values: [0.001]
     K: 
         values: [25]
     D: 
         values: [25]
     reg_theta: 
-        values: [0.1]
+        values: [0.01]
     reg_beta: 
-        values: [0.1]
+        values: [0.1, 0.01, 0.001]
     reg_e:
         values: [0]
