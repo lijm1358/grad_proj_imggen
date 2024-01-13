@@ -61,6 +61,46 @@ class HMDataset(Dataset):
     def __len__(self):
         return len(self.df)
 
+class HMTestDataset(Dataset):
+    def __init__(self, df, user2idx, item2idx, train_df) -> None:
+        super().__init__()
+        self.df = df
+        self.train_df = train_df
+        self.user2idx = user2idx
+        self.item2idx = item2idx
+        self.n_user = len(self.user2idx)
+        self.n_item = len(self.item2idx)
+        # mapping id2idx
+        self.df['article_id'] = self.df['article_id'].map(self.item2idx)
+        self.df['customer_id'] = self.df['customer_id'].map(self.user2idx)
+        self.df['neg'] = np.zeros(len(self.df), dtype=int)
+        self._make_triples_data()
+    
+    def __getitem__(self, index):
+        user = self.df.customer_id[index]
+        pos = self.df.article_id[index]
+        neg = self.df.neg[index]
+        return user, pos, neg
+            
+    def _neg_sampling(self, pos_list):
+        '''
+        사용된 아이템 리스트(pos_list)에 없는 아이템 하나를 negative sample로 추출
+        '''
+        neg = np.random.randint(0,self.n_item,1) 
+        while neg in pos_list:
+            neg = np.random.randint(0,self.n_item,1) 
+        return neg
+
+    def _make_triples_data(self):
+        for idx, row in tqdm(self.df.iterrows(), total=len(self.df)):
+            user_id = row.customer_id
+            user_df = self.train_df[self.train_df.customer_id==user_id]
+            pos_list = (user_df.article_id).tolist()   # 해당 유저가 사용한 아이템 모두 추출
+            self.df.at[idx, 'neg'] = self._neg_sampling(pos_list)
+    
+    def __len__(self):
+        return len(self.df)
+
 class VBPR(nn.Module):
     def __init__(self, n_user, n_item, K, D, img_embedding) -> None:
         super().__init__()
@@ -151,6 +191,26 @@ def train(model, optimizer, dataloader, criterion, device):
     
     return total_loss/len(dataloader)
 
+def eval(model, dataloader, device):
+    model.eval()
+    auc = []
+   
+    with torch.no_grad():
+        for user, pos, neg in tqdm(dataloader):
+            user = user.to(device)
+            pos = pos.to(device)
+            neg = neg.to(device)
+            
+            grun_truth = np.zeros(2*len(pos))
+            grun_truth[:len(pos)] = 1
+            pos_pred, _ = model.cal_each(user, pos)
+            neg_pred, _ = model.cal_each(user, neg)
+            pred = pos_pred.tolist() + neg_pred.tolist()
+            
+            auc.append(roc_auc_score(grun_truth, pred))
+            
+    return sum(auc)/len(auc)
+
 class EarlyStopper:
     def __init__(self, patience=4, min_delta=0.001):
         self.patience = patience
@@ -210,7 +270,7 @@ def cal_auc_score(model, df, sample_user_ids, all_items, device):
 
 def main():
     seed_everything()
-    config_path = "./config/sweep2.yaml"
+    config_path = "./config/sweep.yaml"
     config = get_config(config_path)
     print("--------------- Wandb SETTING ---------------")
     timestamp = get_timestamp()
@@ -233,7 +293,7 @@ def main():
     reg_e = wandb.config.reg_e
     lr = wandb.config.lr
     epoch = wandb.config.epoch
-    batch_size = wandb.config.batch_size
+    batch_size = wandb.config.batch_size    
     
     # get img emb
     print("-------------LOAD IMAGE EMBEDDING-------------")
@@ -243,13 +303,14 @@ def main():
     # load dataset
     print("-------------LOAD DATASET-------------")
     train_dataset = torch.load("./dataset/train_dataset.pt")
-    # test_dataset = torch.load("./dataset/test_dataset.pt")
+    test_dataset = torch.load("./dataset/new_test_dataset.pt")
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size)
-    
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size)
+
     # setting for training 
     n_user = train_dataset.n_user
     n_item = train_dataset.n_item
-    sample_size = (n_user//100)*3
+    sample_size = (n_user//100)*2
     sample_user_ids = np.random.choice(n_user, sample_size, replace=False) # 유저 샘플링
     all_items = np.arange(n_item, dtype=np.int32)
 
@@ -259,20 +320,24 @@ def main():
 
     # train
     vbpr = VBPR(n_user, n_item, K, D, img_emb).to(device)
+    # 모델 불러와서 사용할 경우 아래 코드도 실행, 불러오는 파일의 파라미터랑 322번줄의 모델 파라미터가 같아야 함 그렇지 않은 경우 
+    # vbpr.load_state_dict(torch.load("./model/파일이름.pt"))
     optimizer = Adam(params = vbpr.parameters(), lr=lr)
     early_stopper = EarlyStopper()
     train_loss = []
     train_auc = []
+    test_auc = []
     
     print("-------------TRAINING-------------")
     for i in range(epoch):
         train_loss.append(train(vbpr, optimizer, train_dataloader, criterion, device))
         train_auc.append(cal_auc_score(vbpr, train_dataset.df, sample_user_ids, all_items, device))
+        test_auc.append(eval(vbpr, test_dataloader, device))
         
-        print(f'EPOCH : {i} | AUC : {train_auc[-1]:.6} | LOSS : {train_loss[-1]:.6}')
-        wandb.log({"train-auc":train_auc[-1] ,"train-loss":train_loss[-1], "epoch": i+1})
-        
-        if early_stopper.early_stop(train_auc[-1]):
+        print(f'EPOCH : {i} | TEST AUC : {test_auc[-1]:.6}| TRAIN AUC : {train_auc[-1]:.6} | LOSS : {train_loss[-1]:.6}')
+        wandb.log({"test-auc":test_auc[-1],"train-auc":train_auc[-1] ,"train-loss":train_loss[-1], "epoch": i+1})
+    
+        if early_stopper.early_stop(test_auc[-1]):
             print("-------------EARLY STOPPING-------------")
             break
     
