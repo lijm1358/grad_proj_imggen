@@ -16,7 +16,7 @@ from tqdm import tqdm
 class HMDataset(Dataset):
     def __init__(self, df, user2idx, item2idx, is_train:bool=True) -> None:
         super().__init__()
-        self.df = df
+        self.df = df.drop(labels=["price", "sales_channel_id"], axis=1)
         self.is_train = is_train
         self.user2idx = user2idx
         self.item2idx = item2idx
@@ -25,22 +25,15 @@ class HMDataset(Dataset):
         # mapping id2idx
         self.df['article_id'] = self.df['article_id'].map(self.item2idx)
         self.df['customer_id'] = self.df['customer_id'].map(self.user2idx)
-        
-        # train 데이터인 경우에만 neg 아이템이 생성
-        if is_train:
-            self.df['neg'] = np.zeros(len(self.df), dtype=int)
-            self._make_triples_data()
+        self.df['neg'] = np.zeros(len(self.df), dtype=int)
+        self._make_triples_data()
     
     def __getitem__(self, index):
         user = self.df.customer_id[index]
         pos = self.df.article_id[index]
-        
-        if self.is_train:
-            neg = self.df.neg[index]
-            return user, pos, neg
-        
-        return user, pos
-    
+        neg = self.df.neg[index]
+        return user, pos, neg
+            
     def _neg_sampling(self, pos_list):
         '''
         사용된 아이템 리스트(pos_list)에 없는 아이템 하나를 negative sample로 추출
@@ -61,10 +54,11 @@ class HMDataset(Dataset):
     def __len__(self):
         return len(self.df)
 
+
 class HMTestDataset(Dataset):
     def __init__(self, df, user2idx, item2idx, train_df) -> None:
         super().__init__()
-        self.df = df
+        self.df = df.drop(labels=["price", "sales_channel_id"], axis=1)
         self.train_df = train_df
         self.user2idx = user2idx
         self.item2idx = item2idx
@@ -270,7 +264,7 @@ def cal_auc_score(model, df, sample_user_ids, all_items, device):
 
 def main():
     seed_everything()
-    config_path = "./config/sweep.yaml"
+    config_path = "./config/sweep2.yaml"
     config = get_config(config_path)
     print("--------------- Wandb SETTING ---------------")
     timestamp = get_timestamp()
@@ -321,9 +315,9 @@ def main():
     # train
     vbpr = VBPR(n_user, n_item, K, D, img_emb).to(device)
     # 모델 불러와서 사용할 경우 아래 코드도 실행, 불러오는 파일의 파라미터랑 322번줄의 모델 파라미터가 같아야 함 그렇지 않은 경우 
-    # vbpr.load_state_dict(torch.load("./model/파일이름.pt"))
+    # vbpr.load_state_dict(torch.load("./model/work-###.pt"))
     optimizer = Adam(params = vbpr.parameters(), lr=lr)
-    early_stopper = EarlyStopper()
+    early_stopper = EarlyStopper(patience=30)
     train_loss = []
     train_auc = []
     test_auc = []
