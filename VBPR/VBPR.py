@@ -264,7 +264,7 @@ def cal_auc_score(model, df, sample_user_ids, all_items, device):
 
 def main():
     seed_everything()
-    config_path = "./config/sweep2.yaml"
+    config_path = "./config/sweep.yaml"
     config = get_config(config_path)
     print("--------------- Wandb SETTING ---------------")
     timestamp = get_timestamp()
@@ -291,13 +291,13 @@ def main():
     
     # get img emb
     print("-------------LOAD IMAGE EMBEDDING-------------")
-    img_emb = pd.read_csv("./data/img_emb.csv")
+    img_emb = pd.read_csv("./data/img_emb_new.csv")
     img_emb = torch.tensor(img_emb.values)
     
     # load dataset
     print("-------------LOAD DATASET-------------")
-    train_dataset = torch.load("./dataset/train_dataset.pt")
-    test_dataset = torch.load("./dataset/new_test_dataset.pt")
+    train_dataset = torch.load("./dataset/train_dataset_v3.pt")
+    test_dataset = torch.load("./dataset/test_dataset_v3.pt")
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size)
     test_dataloader = DataLoader(test_dataset, batch_size=batch_size)
 
