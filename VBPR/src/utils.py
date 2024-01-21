@@ -56,3 +56,7 @@ def recall_at_k(true, pred):
     true = np.array(true)
     pred = np.array(pred.cpu())
     return (np.intersect1d(true, pred).size)/(true.size)
+
+def mk_dir(file_path):
+    if not os.path.exists(file_path):
+        os.mkdir(file_path)
