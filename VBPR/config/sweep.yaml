@@ -1,27 +1,29 @@
-program : VBPR.py
+program : main.py
 project : MMRec
 method: grid
 metric: 
-    goal: maximize
-    name: test-auc
+    goal: minimize
+    name: loss
 parameters: 
     dataset:
-        value : "len cut 7"
+        value : "small"
+    model:
+        value : "VBPR"
     sample_size:
-        value : "(n_user//100)*3"
+        values : [500]
     batch_size: 
-        values: [1024] 
+        values: [512] 
     epoch: 
-        values: [30]
+        values: [35]
     lr: 
-        values: [0.001]
+        values: [0.000001, 0.0000005]
     K: 
-        values: [25]
+        values: [35]
     D: 
-        values: [25]
+        values: [45]
     reg_theta: 
-        values: [0.01]
+        values: [0.00001]
     reg_beta: 
-        values: [0.1, 0.01, 0.001]
+        values: [0.0001]
     reg_e:
         values: [0]
