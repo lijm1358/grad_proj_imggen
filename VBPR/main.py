@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from torch.optim import Adam
 from torch.nn import BCELoss
 from src.utils import seed_everything, get_config, get_timestamp, load_pickle, dump_pickle, mk_dir
-from src.model import VBPR, BPRLoss, MF
+from src.model import VBPR, BPRLoss, BPRMF
 from src.dataset import HMTestDataset, HMTrainDataset
 from src.train import train, eval
 
@@ -53,7 +53,7 @@ def main():
     test_dataset = torch.load("./dataset/test_dataset_v1.pt")
     pos_items_each_user = load_pickle("./data/pos_items_each_user_small.pkl")
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size)
-    test_dataloader = DataLoader(test_dataset, batch_size=128) # gpu 메모리에 따라 배치 사이즈 설정
+    test_dataloader = DataLoader(test_dataset, batch_size=64) # gpu 메모리에 따라 배치 사이즈 설정
 
     ############# SETTING FOR TRAIN #############
     n_user = len(test_dataset)
@@ -64,11 +64,11 @@ def main():
     img_emb = img_emb.to(device)
 
     if model_name == "MF":
-        model = MF(n_user, n_item, K).to(device)
-        criterion = BCELoss().to(device)
+        model = BPRMF(n_user, n_item, K).to(device)
+        criterion = BPRLoss(visual=False, reg_theta = reg_theta)
     else:
         model = VBPR(n_user, n_item, K, D, img_emb).to(device)
-        criterion = BPRLoss(reg_theta, reg_beta, reg_e).to(device)
+        criterion = BPRLoss(visual=True, reg_theta=reg_theta, reg_beta=reg_beta, reg_e=reg_e).to(device)
 
     optimizer = Adam(params = model.parameters(), lr=lr)
     train_loss = []
