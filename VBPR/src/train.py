@@ -33,7 +33,7 @@ def eval(model, dataloader, all_item, pos_items_each_user, device, sample_size):
     model.eval()
     metric = []
     pred_list = {}
-    sample_size = sample_size+1
+    sample_size = sample_size+1 #501
     
     with torch.no_grad():
         for users, targets in tqdm(dataloader):
@@ -49,10 +49,7 @@ def eval(model, dataloader, all_item, pos_items_each_user, device, sample_size):
                 candidate_items = torch.cat([candidate_items, items], dim=0)
                 user = torch.cat([user, u_ids], dim=0)
             
-            if model._get_name() == "VBPR":
-                out, _ = model.cal_each(user, candidate_items)
-            else:
-                out = sigmoid(model(user, candidate_items))
+            out, _ = model.cal_each(user, candidate_items)
             
             for target in targets:
                 if idx-sample_size<0:
@@ -60,7 +57,7 @@ def eval(model, dataloader, all_item, pos_items_each_user, device, sample_size):
                     break
                 user_res = out[idx-sample_size:idx]
                 user_cadidate = candidate_items[idx-sample_size:idx]
-                top_k_idx = user_res.argsort(descending=True)[:20]
+                top_k_idx = user_res.argsort(descending=True)[:20] # top20
                 pred_list[target.item()] = user_cadidate[top_k_idx]
                 metric.append(recall_at_k(target.item(), user_cadidate[top_k_idx]))
                 idx += sample_size
