@@ -13,13 +13,8 @@ def train(model, optimizer, dataloader, criterion, device):
         pos = pos.to(device)
         neg = neg.to(device)
         
-        if criterion._get_name() != "BCELoss":
-            diff, pos_params, neg_params = model(user, pos, neg)
-            loss = criterion(diff, pos_params, neg_params)
-        else:
-            out = sigmoid(model(user, pos))
-            target = torch.ones_like(neg).float()
-            loss = criterion(out, target)
+        diff, pos_params, neg_params = model(user, pos, neg)
+        loss = criterion(diff, pos_params, neg_params)
 
         model.zero_grad()
         loss.backward()
