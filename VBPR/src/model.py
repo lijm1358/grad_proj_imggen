@@ -43,11 +43,12 @@ class VBPR(nn.Module):
         return (xui-xuj), pos_params, neg_params
 
 class BPRLoss(nn.Module):
-    def __init__(self, reg_theta, reg_beta, reg_e) -> None:
+    def __init__(self, visual=True, reg_theta=0, reg_beta=0, reg_e=0) -> None:
         super().__init__()
         self.reg_theta = reg_theta
         self.reg_beta = reg_beta
         self.reg_e = reg_e
+        self.visual = visual
 
     def _cal_l2(self, *tensors):
         total = 0
@@ -56,12 +57,16 @@ class BPRLoss(nn.Module):
         return 0.5 * total
 
     def _reg_term(self, pos_params, neg_params):
-        alpha, beta_u, beta_pos, beta_prime_pos, gamma_u, gamma_pos, e_pos, theta_u = pos_params
-        _, _, beta_neg, beta_prime_neg, _, gamma_neg, e_neg, _ = neg_params
-
-        reg_out = self.reg_theta * self._cal_l2(alpha, beta_u, beta_pos, beta_neg, theta_u, gamma_u, gamma_pos, gamma_neg)
-        reg_out += self.reg_beta * self._cal_l2(beta_prime_pos, beta_prime_neg)
-        reg_out += self.reg_e * self._cal_l2(e_pos, e_neg)
+        if self.visual:
+            alpha, beta_u, beta_pos, beta_prime_pos, gamma_u, gamma_pos, e_pos, theta_u = pos_params
+            _, _, beta_neg, beta_prime_neg, _, gamma_neg, e_neg, _ = neg_params
+            reg_out = self.reg_theta * self._cal_l2(alpha, beta_u, beta_pos, beta_neg, theta_u, gamma_u, gamma_pos, gamma_neg)
+            reg_out += self.reg_beta * self._cal_l2(beta_prime_pos, beta_prime_neg)
+            reg_out += self.reg_e * self._cal_l2(e_pos, e_neg)
+        else:
+            alpha, beta_u, beta_pos, gamma_u, gamma_pos = pos_params
+            _, _, beta_neg, _, gamma_neg = neg_params
+            reg_out = self.reg_theta * self._cal_l2(alpha, beta_u, beta_pos, beta_neg, gamma_u, gamma_pos, gamma_neg)
 
         return reg_out
 
@@ -71,19 +76,33 @@ class BPRLoss(nn.Module):
 
         return loss
     
-class MF(nn.Module):
-    def __init__(self, n_user: int, n_item:int, n_factor:int):
+class BPRMF(nn.Module):
+    def __init__(self, n_user, n_item, K) -> None:
         super().__init__()
-        self.P = nn.Embedding(n_user, n_factor) # user x factor
-        self.Q = nn.Embedding(n_item, n_factor) # itme x factor
-        self.user_bias = nn.Embedding(n_user, 1) # user x 1
-        self.item_bias = nn.Embedding(n_item, 1) # item x 1
+        self.n_user = n_user
+        self.n_item = n_item
+        self.K = K
 
-    def forward(self, user_id: torch.tensor, item_id: torch.tensor):
-        P_u = self.P(user_id)
-        Q_i = self.Q(item_id)
-        b_u = self.user_bias(user_id) 
-        b_i = self.item_bias(item_id)
+        self.offset = nn.Parameter(torch.zeros(1))
+        self.user_bias = nn.Embedding(self.n_user,1) # user*1
+        self.item_bias = nn.Embedding(self.n_item,1) # item*1
+        self.user_emb = nn.Embedding(self.n_user,self.K) # user*K
+        self.item_emb = nn.Embedding(self.n_item,self.K) # item*K
+    
+        self._init_weights()
 
-        out = torch.sum(P_u*Q_i, axis=1) + torch.squeeze(b_u) + torch.squeeze(b_i)
-        return out.view(-1)
+    def _init_weights(self):
+        nn.init.xavier_uniform_(self.user_bias.weight)
+        nn.init.xavier_uniform_(self.item_bias.weight.data)
+        nn.init.xavier_uniform_(self.user_emb.weight.data)
+        nn.init.xavier_uniform_(self.item_emb.weight.data)
+    
+    def cal_each(self, user, item):
+        mf_term = self.offset + self.user_bias(user).T + self.item_bias(item).T + ((self.user_emb(user)).matmul(self.item_emb(item).T)).sum(dim=1).unsqueeze(dim=0)
+        params = (self.offset, self.user_bias(user), self.item_bias(item), self.user_emb(user), self.item_emb(item))
+        return mf_term.squeeze(), params
+    
+    def forward(self, user, pos, neg):
+        xui, pos_params = self.cal_each(user,pos)
+        xuj, neg_params = self.cal_each(user,neg)
+        return (xui-xuj), pos_params, neg_params
