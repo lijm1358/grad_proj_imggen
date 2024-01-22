@@ -2,7 +2,6 @@ import numpy as np
 import torch
 from tqdm import tqdm
 from src.utils import recall_at_k
-from torch import sigmoid
 
 def train(model, optimizer, dataloader, criterion, device):
     model.train()
