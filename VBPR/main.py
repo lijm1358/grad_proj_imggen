@@ -6,7 +6,6 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 from torch.optim import Adam
-from torch.nn import BCELoss
 from src.utils import seed_everything, get_config, get_timestamp, load_pickle, dump_pickle, mk_dir
 from src.model import VBPR, BPRLoss, BPRMF
 from src.dataset import HMTestDataset, HMTrainDataset
