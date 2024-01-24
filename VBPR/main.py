@@ -42,6 +42,7 @@ def main():
     batch_size = wandb.config.batch_size   
     sample_size = wandb.config.sample_size
     model_name = wandb.config.model
+    vis_weight = wandb.config.vis_weight
     
     ############# LOAD DATASET #############
     print("-------------LOAD IMAGE EMBEDDING-------------")
@@ -66,7 +67,7 @@ def main():
         model = BPRMF(n_user, n_item, K).to(device)
         criterion = BPRLoss(visual=False, reg_theta = reg_theta)
     else:
-        model = VBPR(n_user, n_item, K, D, img_emb).to(device)
+        model = VBPR(n_user, n_item, K, D, img_emb, vis_weight).to(device)
         criterion = BPRLoss(visual=True, reg_theta=reg_theta, reg_beta=reg_beta, reg_e=reg_e).to(device)
 
     optimizer = Adam(params = model.parameters(), lr=lr)

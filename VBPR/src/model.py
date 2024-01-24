@@ -2,13 +2,14 @@ import torch
 import torch.nn as nn
 
 class VBPR(nn.Module):
-    def __init__(self, n_user, n_item, K, D, img_embedding) -> None:
+    def __init__(self, n_user, n_item, K, D, img_embedding, vis_weight) -> None:
         super().__init__()
         self.feat_map= img_embedding.float() # user * 512
         self.n_user = n_user
         self.n_item = n_item
         self.K = K
         self.D = D
+        self.vis_weight = vis_weight
         self.F = self.feat_map.shape[1] 
 
         self.offset = nn.Parameter(torch.zeros(1))
@@ -32,7 +33,7 @@ class VBPR(nn.Module):
         nn.init.xavier_uniform_(self.user_vis_emb.weight.data)
     
     def cal_each(self, user, item):
-        vis_term = ((self.user_vis_emb(user)).matmul(self.item_vis_emb.weight@(self.feat_map[item].T))).sum(dim=1) + (self.vis_bias.weight.T)@(self.feat_map[item].T)
+        vis_term = self.vis_weight*(((self.user_vis_emb(user)).matmul(self.item_vis_emb.weight@(self.feat_map[item].T))).sum(dim=1) + (self.vis_bias.weight.T)@(self.feat_map[item].T))
         mf_term = self.offset + self.user_bias(user).T + self.item_bias(item).T + ((self.user_emb(user)).matmul(self.item_emb(item).T)).sum(dim=1).unsqueeze(dim=0)
         params = (self.offset, self.user_bias(user), self.item_bias(item), self.vis_bias.weight, self.user_emb(user), self.item_emb(item), self.item_vis_emb.weight, self.user_vis_emb(user))
         return (mf_term+vis_term).squeeze(), params

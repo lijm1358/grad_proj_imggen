@@ -14,16 +14,19 @@ parameters:
     batch_size: 
         values: [512] 
     epoch: 
-        values: [35]
+        values: [70]
     lr: 
-        values: [0.000001, 0.0000005]
+        values: [0.0000005]
     K: 
-        values: [35]
+        values: [40]
     D: 
-        values: [45]
+        values: [40]
+    vis_weight:
+        values: [0.002]
     reg_theta: 
-        values: [0.00001]
+        values: [0.001]
     reg_beta: 
-        values: [0.0001]
+        values: [0.001]
     reg_e:
-        values: [0]
+        values: [0.001]
+    
