@@ -78,7 +78,7 @@ def main():
     print("-------------TRAINING-------------")
     for i in range(epoch):
         train_loss.append(train(model, optimizer, train_dataloader, criterion, device))
-        if i%3 == 0:
+        if i%5 == 0:
             metric, pred_list = eval(model, test_dataloader, all_items, pos_items_each_user, device, sample_size)
             metrics.append(metric)
             dump_pickle(pred_list, f"./data/res/{timestamp}_{i}.pkl")
