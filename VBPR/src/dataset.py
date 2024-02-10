@@ -14,21 +14,20 @@ class HMTrainDataset(Dataset):
         self._make_triples_data()
     
     def __getitem__(self, index):
-        user = self.df.customer_id[index]
-        pos = self.df.article_id[index]
-        neg = self.df.neg[index]
+        user = self.df.iloc[index]['customer_id']
+        pos = self.df.iloc[index]['article_id']
+        neg = self.df.iloc[index]['neg']
         return user, pos, neg
-            
+    
     def _neg_sampling(self, pos_list, prod_type_no):
         # 같은 prod_type_no 내에서 neg sampling
         neg = random.choice(self.items_by_prod_type[prod_type_no]) 
         while neg in pos_list:
-            neg = random.choice(self.items_by_prod_type[prod_type_no])
+            neg = random.choice(self.items_by_prod_type[prod_type_no]) 
         return neg
 
     def _make_triples_data(self):
         for user_id, rows in tqdm(self.df.groupby("customer_id")):
-            # pos_list = {k:1 for k in pos_items_each_user[user_id]}
             pos_list = self.pos_items_each_user[user_id]
             for idx, row in rows.iterrows():
                 item_id = row.article_id
@@ -45,8 +44,8 @@ class HMTestDataset(Dataset):
         self.df = df
         
     def __getitem__(self, index):
-        user = self.df.customer_id[index]
-        pos = self.df.article_id[index]
+        user = self.df.iloc[index]['customer_id']
+        pos = self.df.iloc[index]['article_id']
         return user, pos
 
     def __len__(self):
