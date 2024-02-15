@@ -9,20 +9,22 @@ parameters:
         value : "small"
     model:
         value : "VBPR"
+    emb_norm:
+        value: "L2"
     sample_size:
         values : [500]
     batch_size: 
         values: [512] 
     epoch: 
-        values: [70]
+        values: [100]
     lr: 
         values: [0.0000005]
     K: 
-        values: [40]
+        values: [20]
     D: 
-        values: [40]
-    vis_weight:
-        values: [0.002]
+        values: [20]
+    top_k: 
+        values: [20]
     reg_theta: 
         values: [0.001]
     reg_beta: 

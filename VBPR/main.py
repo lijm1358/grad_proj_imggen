@@ -24,10 +24,7 @@ def main():
     dotenv.load_dotenv()
     WANDB_API_KEY = os.environ.get("WANDB_API_KEY")
     wandb.login(key=WANDB_API_KEY)
-    run = wandb.init(
-        project="MMRec",
-        name=name, 
-        config=config)
+    run = wandb.init(project="MMRec", name=name, config=config)
 
     ############# SET HYPER PARAMS #############
     K = wandb.config.K
@@ -40,7 +37,7 @@ def main():
     batch_size = wandb.config.batch_size   
     sample_size = wandb.config.sample_size
     model_name = wandb.config.model
-    vis_weight = wandb.config.vis_weight
+    emb_norm = wandb.config.emb_norm
     top_k = wandb.config.top_k
     
     ############# LOAD DATASET #############
@@ -62,7 +59,7 @@ def main():
         model = BPRMF(n_user, n_item, K).to(device)
         criterion = BPRLoss(visual=False, reg_theta = reg_theta)
     else:
-        model = VBPR(n_user, n_item, K, D, img_emb, vis_weight).to(device)
+        model = VBPR(n_user, n_item, K, D, img_emb, emb_norm).to(device)
         criterion = BPRLoss(visual=True, reg_theta=reg_theta, reg_beta=reg_beta, reg_e=reg_e).to(device)
 
     optimizer = Adam(params = model.parameters(), lr=lr)
@@ -84,7 +81,6 @@ def main():
     ############# WANDB FINISH & SAVING FILES #############
     wandb.save(config_path)
     wandb.finish()
-    
 
 if __name__ == "__main__":
     main()

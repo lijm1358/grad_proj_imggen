@@ -2,30 +2,30 @@ import torch
 import torch.nn as nn
 
 class VBPR(nn.Module):
-    def __init__(self, n_user, n_item, K, D, img_embedding, vis_weight) -> None:
+    def __init__(self, n_user, n_item, K, D, img_embedding, emb_norm="L2") -> None:
         super().__init__()
         self.feat_map= img_embedding.float() # user * 512
         self.n_user = n_user
         self.n_item = n_item
         self.K = K
         self.D = D
-        self.vis_weight = vis_weight
+        self.emb_norm = emb_norm
         self.F = self.feat_map.shape[1] 
 
         self.offset = nn.Parameter(torch.zeros(1))
-        self.user_bias = nn.Embedding(self.n_user,1) # user*1
-        self.item_bias = nn.Embedding(self.n_item,1) # item*1
-        self.vis_bias = nn.Embedding(self.F,1)       # 512*1
+        self.user_bias = nn.Embedding(self.n_user,1)     # user*1
+        self.item_bias = nn.Embedding(self.n_item,1)     # item*1
+        self.vis_bias = nn.Embedding(self.F,1)           # 512*1
         self.user_emb = nn.Embedding(self.n_user,self.K) # user*K
         self.item_emb = nn.Embedding(self.n_item,self.K) # item*K
-        self.item_vis_emb = nn.Embedding(self.D, self.F) # D*K
+        self.item_vis_emb = nn.Embedding(self.D, self.F) # D*F
         self.user_vis_emb = nn.Embedding(self.n_user, self.D) # user*D
         
-        # batch_norm
-        self.user_bn = nn.BatchNorm1d(self.K)
-        self.item_bn = nn.BatchNorm1d(self.K)
-        self.item_vis_bn = nn.BatchNorm1d(self.F)
-        self.user_vis_bn = nn.BatchNorm1d(self.D)
+        if self.emb_norm == "Batch":
+            self.user_bn = nn.BatchNorm1d(self.K)
+            self.item_bn = nn.BatchNorm1d(self.K)
+            self.item_vis_bn = nn.BatchNorm1d(self.F)
+            self.user_vis_bn = nn.BatchNorm1d(self.D)
     
         self._init_weights()
 
@@ -44,15 +44,22 @@ class VBPR(nn.Module):
         user_vis_emb = self.user_vis_emb(user)
         item_vis_emb = self.item_vis_emb.weight
         
-        #batch normalization
-        user_emb = self.user_bn(user_emb)
-        item_emb = self.item_bn(item_emb)
-        user_vis_emb = self.user_vis_bn(user_vis_emb)
-        item_vis_emb = self.item_vis_bn(item_vis_emb)
+        if self.emb_norm == "L2":
+            user_emb = user_emb / torch.linalg.norm(user_emb, dim=1).unsqueeze(dim=1)
+            item_emb = item_emb / torch.linalg.norm(item_emb, dim=1).unsqueeze(dim=1)
+            user_vis_emb = user_vis_emb / torch.linalg.norm(user_vis_emb, dim=1).unsqueeze(dim=1)
+            item_vis_emb = item_vis_emb / torch.linalg.norm(item_vis_emb, dim=1).unsqueeze(dim=1)
+
+        if self.emb_norm == "Batch":
+            user_emb = self.user_bn(user_emb)
+            item_emb = self.item_bn(item_emb)
+            user_vis_emb = self.user_vis_bn(user_vis_emb)
+            item_vis_emb = self.item_vis_bn(item_vis_emb)
 
         vis_term = ((user_vis_emb).matmul(self.item_vis_emb.weight@(self.feat_map[item].T))).sum(dim=1) + (self.vis_bias.weight.T)@(self.feat_map[item].T)
         mf_term = self.offset + self.user_bias(user).T + self.item_bias(item).T + ((user_emb).matmul(item_emb.T)).sum(dim=1).unsqueeze(dim=0)
         params = (self.offset, self.user_bias(user), self.item_bias(item), self.vis_bias.weight, user_emb, item_emb, item_vis_emb, user_vis_emb)
+
         return (mf_term+vis_term).squeeze(), params
     
     def forward(self, user, pos, neg):
@@ -91,7 +98,6 @@ class BPRLoss(nn.Module):
     def forward(self, diff, pos_params, neg_params):
         loss = -nn.functional.logsigmoid(diff).sum() # sigma(x_uij)
         loss += self._reg_term(pos_params, neg_params) # reg_term
-
         return loss
     
 class BPRMF(nn.Module):
