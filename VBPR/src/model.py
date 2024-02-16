@@ -18,13 +18,14 @@ class VBPR(nn.Module):
         self.vis_bias = nn.Embedding(self.F,1)           # 512*1
         self.user_emb = nn.Embedding(self.n_user,self.K) # user*K
         self.item_emb = nn.Embedding(self.n_item,self.K) # item*K
-        self.item_vis_emb = nn.Embedding(self.D, self.F) # D*F
+        #self.item_vis_emb = nn.Embedding(self.D, self.F) # D*F
+        self.item_vis_emb = nn.Embedding(self.F, self.D)
         self.user_vis_emb = nn.Embedding(self.n_user, self.D) # user*D
         
         if self.emb_norm == "Batch":
             self.user_bn = nn.BatchNorm1d(self.K)
             self.item_bn = nn.BatchNorm1d(self.K)
-            self.item_vis_bn = nn.BatchNorm1d(self.F)
+            self.item_vis_bn = nn.BatchNorm1d(self.D)
             self.user_vis_bn = nn.BatchNorm1d(self.D)
     
         self._init_weights()
@@ -56,8 +57,11 @@ class VBPR(nn.Module):
             user_vis_emb = self.user_vis_bn(user_vis_emb)
             item_vis_emb = self.item_vis_bn(item_vis_emb)
 
-        vis_term = ((user_vis_emb).matmul(self.item_vis_emb.weight@(self.feat_map[item].T))).sum(dim=1) + (self.vis_bias.weight.T)@(self.feat_map[item].T)
-        mf_term = self.offset + self.user_bias(user).T + self.item_bias(item).T + ((user_emb).matmul(item_emb.T)).sum(dim=1).unsqueeze(dim=0)
+        '''vis_term = ((user_vis_emb).matmul(self.item_vis_emb.weight@(self.feat_map[item].T))).sum(dim=1) + (self.vis_bias.weight.T)@(self.feat_map[item].T)
+        mf_term = self.offset + self.user_bias(user).T + self.item_bias(item).T + ((user_emb).matmul(item_emb.T)).sum(dim=1).unsqueeze(dim=0)'''
+        
+        vis_term = ((user_vis_emb)*(self.feat_map[item]@self.item_vis_emb.weight)).sum(dim=1).unsqueeze(-1) + (self.feat_map[item])@(self.vis_bias.weight)
+        mf_term = self.offset + self.user_bias(user) + self.item_bias(item) + (user_emb*item_emb).sum(dim=1).unsqueeze(-1)
         params = (self.offset, self.user_bias(user), self.item_bias(item), self.vis_bias.weight, user_emb, item_emb, item_vis_emb, user_vis_emb)
 
         return (mf_term+vis_term).squeeze(), params
