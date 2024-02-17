@@ -6,9 +6,8 @@ import numpy as np
 import torch
 from datetime import datetime
 
-
 class EarlyStopper:
-    def __init__(self, patience=4, min_delta=0.001):
+    def __init__(self, patience=30, min_delta=0.00001):
         self.patience = patience
         self.min_delta = min_delta
         self.counter = 0
@@ -52,11 +51,22 @@ def save_pt(data, path):
     with open(path, "wb") as file:
         torch.save(data, file)
 
-def recall_at_k(true, pred):
-    true = np.array(true)
-    pred = np.array(pred.cpu())
-    return (np.intersect1d(true, pred).size)/(true.size)
+def recall_at_k(k, true, pred):
+    true = true.data.cpu().numpy()
+    pred = (pred[:k]).data.cpu().numpy()
+    return len(np.intersect1d(true, pred)) / len(true)
+
+def ndcg_at_k(k, true, pred):
+    true = true.data.cpu().numpy()
+    pred = (pred[:k]).data.cpu().numpy()
+    
+    log2i = np.log2(np.arange(2, k + 2)) 
+    dcg = np.sum(np.isin(pred, true) / log2i) # rel_i = 1
+    idcg = np.sum((1 / log2i)[:min(len(true), k)]) 
+    
+    return dcg/idcg
 
 def mk_dir(file_path):
     if not os.path.exists(file_path):
         os.mkdir(file_path)
+    
