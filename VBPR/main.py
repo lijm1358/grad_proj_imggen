@@ -38,7 +38,6 @@ def main():
     sample_size = wandb.config.sample_size
     model_name = wandb.config.model
     emb_norm = wandb.config.emb_norm
-    top_k = wandb.config.top_k
     
     ############# LOAD DATASET #############
     print("-------------LOAD IMAGE EMBEDDING-------------")
@@ -63,20 +62,18 @@ def main():
         criterion = BPRLoss(visual=True, reg_theta=reg_theta, reg_beta=reg_beta, reg_e=reg_e).to(device)
 
     optimizer = Adam(params = model.parameters(), lr=lr)
-    train_loss = []
-    metrics = []
     
     ############# TRAIN AND EVAL #############
     print("-------------TRAINING-------------")
     for i in range(epoch):
-        train_loss.append(train(model, optimizer, train_dataloader, criterion, device))
-        if i%3 == 0:
-            metrics.append(eval(model, test_dataset, candidate_items_each_user, top_k, device))
-            print(f'EPOCH : {i+1} | Recall : {metrics[-1]:.6} | LOSS : {train_loss[-1]:.6}')
-            wandb.log({"recall":metrics[-1] ,"loss":train_loss[-1], "epoch": i+1})
-        else: 
-            print(f'EPOCH : {i+1} | LOSS : {train_loss[-1]:.6}')
-            wandb.log({"loss":train_loss[-1], "epoch": i+1})
+        train_loss = train(model, optimizer, train_dataloader, criterion, device)
+        print(f'EPOCH : {i+1} | LOSS : {train_loss}')
+        wandb.log({"loss":train_loss, "epoch": i+1})
+        
+        if i%2 == 0:
+            metrics = eval(model, test_dataset, candidate_items_each_user, device)
+            print(f'R10 : {metrics["R10"]} | R20 : {metrics["R20"]} | R40 : {metrics["R40"]} | N10 : {metrics["N10"]} | N20 : {metrics["N20"]} | N40 : {metrics["N40"]}')
+            wandb.log(metrics)
 
     ############# WANDB FINISH & SAVING FILES #############
     wandb.save(config_path)

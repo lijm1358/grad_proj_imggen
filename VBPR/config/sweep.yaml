@@ -10,7 +10,7 @@ parameters:
     model:
         value : "VBPR"
     emb_norm:
-        value: "L2"
+        value: "None"
     sample_size:
         values : [500]
     batch_size: 
@@ -22,8 +22,6 @@ parameters:
     K: 
         values: [20]
     D: 
-        values: [20]
-    top_k: 
         values: [20]
     reg_theta: 
         values: [0.001]
