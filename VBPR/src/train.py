@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm
 from src.utils import recall_at_k, ndcg_at_k
 
-def train(model, optimizer, dataloader, criterion, device):
+def train(model, optimizer, scheduler, dataloader, criterion, device):
     model.train()
     total_loss = 0
 
@@ -17,10 +17,10 @@ def train(model, optimizer, dataloader, criterion, device):
 
         model.zero_grad()
         loss.backward()
-        optimizer.step()
-
+        optimizer.step()        
         total_loss += loss.item()
-    
+        
+    scheduler.step()
     return total_loss/len(dataloader)
 
 def eval(model, dataset, candidate_items_each_user, device):
