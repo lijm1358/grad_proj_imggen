@@ -76,6 +76,7 @@ def main(number_gpu):
     # pipe.enable_xformers_memory_efficient_attention()
     # pipe.unet = torch.compile(pipe.unet, mode="reduce-overhead", fullgraph=True)
     
+    
     for i, prompt in enumerate(new_item_desc):
         try:
             print(f"[{i}/{len(new_item_desc)}] Generating images with id {items_id[i]} ({prompt})")
@@ -90,7 +91,7 @@ def main(number_gpu):
             
             prompt += "Displayed against a white background, ensuring the entire item is visible and centrally placed. No one wears it."
             
-            images = pipe(prompt, width=WIDTH, height=HEIGHT, num_inference_steps=INFERENCE_STEP, guidance_scale=8.5)[0]
+            images = pipe(prompt, width=WIDTH, height=HEIGHT, num_inference_steps=INFERENCE_STEP)[0]
             print(images)
             # latents = pipe.latents
             
@@ -116,7 +117,7 @@ if __name__ == '__main__':
     # nohup python -u fashion_data_gen.py &
     # tail -f nohup.out
     parser = argparse.ArgumentParser()
-    parser.add_argument("-n", "--number_gpu", dest="number_gpu", action="store")
+    parser.add_argument("-n", "--number_gpu", dest="number_gpu", action="store", required=True)
     args = parser.parse_args()
     
     os.makedirs(gen_img_save_path, exist_ok=True)
