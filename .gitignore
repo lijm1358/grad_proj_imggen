@@ -7,3 +7,5 @@ VBPR/dataset
 *.DS_Store
 .env
 __pycache__/
+dataset/
+dataset_fashion/
