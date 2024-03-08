@@ -9,7 +9,7 @@ DATASET_PATH = "./dataset_fashion"
 IMAGE_PATH = os.path.join(DATASET_PATH, "images")
 EMBEDDING_PATH = os.path.join(DATASET_PATH, "embeddings")
 # CSV_PATH = "./data/articles_with_img.csv"
-CSV_PATH = "./data/new_item_data.csv"
+CSV_PATH = "./data/new_item_data2.csv"
 
 def seed_everything(seed: int = 42):
     random.seed(seed)
@@ -23,6 +23,7 @@ def seed_everything(seed: int = 42):
 def main():
     img_original_df = pd.read_csv(CSV_PATH)
     img_dir_list = os.listdir(IMAGE_PATH)
+    embedding_file_list = os.listdir(EMBEDDING_PATH)
     
     try:
         assert len(img_original_df) == len(img_dir_list)
@@ -38,6 +39,10 @@ def main():
     except AssertionError:
         raise AssertionError(f"{target_path} has under 3 images")
     
+    try:
+        assert len(embedding_file_list) == len(img_original_df) + 1
+    except AssertionError:
+        raise AssertionError(f"generated embedding file length {len(embedding_file_list)} dose not match with {len(img_original_df) + 1}")
     
     try:
         original_ids = img_original_df["article_id"].sort_values().to_numpy()
