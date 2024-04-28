@@ -1,7 +1,7 @@
 fashion-clip
 kaggle
 wandb
-scikit-learn
+sklearn
 diffusers
 sklearn
 tqdm
