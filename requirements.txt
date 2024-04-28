@@ -2,3 +2,9 @@ fashion-clip
 kaggle
 wandb
 scikit-learn
+diffusers
+sklearn
+tqdm
+transformers
+numpy
+pandas
