@@ -1,6 +1,4 @@
 fashion-clip
-kaggle
-wandb
 diffusers
 tqdm
 transformers
