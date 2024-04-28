@@ -2,7 +2,6 @@ fashion-clip
 kaggle
 wandb
 diffusers
-sklearn
 tqdm
 transformers
 numpy
