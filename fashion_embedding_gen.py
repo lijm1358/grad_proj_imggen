@@ -20,8 +20,6 @@ def seed_everything(seed: int = 42):
 def main():
     fclip = FashionCLIP('fashion-clip')
     
-    # images_list = [[os.path.join(IMAGES_PATH, image_id, image_id + f"_{i}.jpg") for i in range(1, 4)] for image_id in os.listdir(IMAGES_PATH)]
-    
     images_list = [os.path.join(IMAGES_PATH, image_id, image_id + f"_{i}.jpg") for image_id in os.listdir(IMAGES_PATH) for i in range(1, 4)]
     
     image_embeddings = fclip.encode_images(images_list, batch_size=128)
@@ -29,7 +27,6 @@ def main():
     print(f"size of image embeddings : {image_embeddings.shape}")
     torch.save(image_embeddings,os.path.join(EMBEDDINGS_PATH, "embeddings.pth"))
     
-    # image_embeddings = torch.load(os.path.join(EMBEDDINGS_PATH, "embeddings.pth"))
     image_embeddings = image_embeddings.reshape(-1, 3, 512)
     
     print(image_embeddings.shape)

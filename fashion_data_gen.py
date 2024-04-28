@@ -20,9 +20,9 @@ INFERENCE_STEP = 30
 
 np.random.seed(42) # query 색상 랜덤 추가 시 seed 고정
 
-img_root = "./data/images/"
-items = pd.read_csv("./data/articles_with_img.csv")
-cut_items = pd.read_csv("./VBPR/new_item_data.csv")
+items = pd.read_csv("./data/articles.csv")
+cut_items = pd.read_csv("./data/additional_id_2024-04-28.csv")
+# cut_items = pd.read_csv("./VBPR/new_item_data.csv")
 
 items = items[items["article_id"].isin(cut_items["article_id"])]
 items_desc = items["detail_desc"].values
@@ -54,8 +54,11 @@ def query_add_color() -> List[str]:
                 
     return new_item_desc
 
-def main(number_gpu):
-    gen_log = f"./dataset_fashion/logs_{number_gpu}.txt"
+def main(args):
+    number_gpu = args.number_gpu
+    image_id = args.image_id if args.image_id is not None else number_gpu
+    print(image_id)
+    gen_log = f"./dataset_fashion/logs_{image_id}.txt"
     new_item_desc = query_add_color()
     
     fclip = FashionCLIP('fashion-clip')
@@ -73,8 +76,6 @@ def main(number_gpu):
     pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config)
 
     pipe = pipe.to(f"cuda:{number_gpu}")
-    # pipe.enable_xformers_memory_efficient_attention()
-    # pipe.unet = torch.compile(pipe.unet, mode="reduce-overhead", fullgraph=True)
     
     
     for i, prompt in enumerate(new_item_desc):
@@ -83,26 +84,14 @@ def main(number_gpu):
             
             filename = items_id[i]
             
-            # latents = pipe([prompt] * BATCH_SIZE, width=WIDTH, height=HEIGHT, num_inference_steps=INFERENCE_STEP, output_type="latent")
-            
-            # images = pipe.vae.decode(latents.images / pipe.vae.config.scaling_factor, return_dict=False)[0].detach()
-            # images = pipe.image_processor.postprocess(images, output_type="pil")
-            # torch.cuda.empty_cache()
-            
             prompt += "Displayed against a white background, ensuring the entire item is visible and centrally placed. No one wears it."
             
             images = pipe(prompt, width=WIDTH, height=HEIGHT, num_inference_steps=INFERENCE_STEP)[0]
-            print(images)
-            # latents = pipe.latents
-            
-            # image_embeddings = fclip.encode_images(images, batch_size=4)
             
             os.makedirs(os.path.join(gen_img_save_path, filename), exist_ok=True)
-            # torch.save(latents, os.path.join(gen_latent_save_path, f"{filename}.pt"))
             for j, img in enumerate(images):
                 os.makedirs(os.path.join(gen_img_save_path, filename), exist_ok=True)
-                img.save(os.path.join(gen_img_save_path, filename, f"{filename}_{number_gpu}.jpg"))
-            # dump_pickle(image_embeddings, os.path.join(gen_embed_save_path, f"{filename}.pkl"))
+                img.save(os.path.join(gen_img_save_path, filename, f"{filename}_{image_id}.jpg"))
             
             with open(gen_log, "a") as file:
                 file.write(f"{i} - {items_id[i]} : SUCCESS\n")
@@ -114,14 +103,13 @@ def main(number_gpu):
         
 
 if __name__ == '__main__':
-    # nohup python -u fashion_data_gen.py &
-    # tail -f nohup.out
     parser = argparse.ArgumentParser()
     parser.add_argument("-n", "--number_gpu", dest="number_gpu", action="store", required=True)
+    parser.add_argument("-i", "--image_id", dest="image_id", action="store", required=False)
     args = parser.parse_args()
     
     os.makedirs(gen_img_save_path, exist_ok=True)
     os.makedirs(gen_latent_save_path, exist_ok=True)
     os.makedirs(gen_embed_save_path, exist_ok=True)
     
-    main(args.number_gpu)
+    main(args)
